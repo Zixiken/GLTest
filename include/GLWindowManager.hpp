@@ -1,10 +1,10 @@
 #ifndef GLWM_H
 #define GLWM_H
 #include <iostream>
-#include <limits>
 #include <cstdint>
 #include <cstring>
 #include <GL/glx.h>
+#include "GLExtensionScanner.hpp"
 
 #define GLWM_OK                     0
 #define GLWM_CONNECT_FAIL           1
@@ -30,22 +30,29 @@ public:
     bool swapBuffers();
     uint8_t getError();
     bool getXError(XErrorEvent *);
+    void setLoopFunction(void ());
+    void loop();
+
+    GLWindowManager(GLExtensionScanner *);
 
 private:
     static bool xError;
     static XErrorEvent lastError;
 
-    bool started;
-    uint8_t error;
-    int32_t depth, s, glXMajor, glXMinor;
-    const char * glxExts;
     GLXWindow glxW;
     GLXFBConfig fbc;
     GLXContext c;
     Window xW;
     Display * d;
+    Atom protos, del;
+    bool doLoop, started = false;
+    uint8_t error = GLWM_OK;
+    int32_t depth, s;
+    GLExtensionScanner * gles;
+    void (* loopFunc)() = &defaultLoopFunc;
 
     static int printError(Display *, XErrorEvent *);
+    static void defaultLoopFunc();
 
     void cleanup();
     bool connectToDisplay();
@@ -53,9 +60,9 @@ private:
     void selectScreen();
     void selectDepth();
     bool selectFBConfig();
-    void getGLXExtensions();
-    bool glxExtSupported(const char *);
     bool createContext();
     bool createWindow();
+    bool setWindowProps();
+    void handleEvents();
 };
 #endif

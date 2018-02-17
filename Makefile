@@ -10,6 +10,9 @@ ${outName}: ${objs}
 ${objs}: obj/%.o: src/%.cpp
 	${CXX} -c ${CXXFLAGS} -o $@ $<
 
+GLES_Hdeps := GLExtensionScanner GLWindowManager 
+$(patsubst %, obj/%.o, ${GLES_Hdeps}): include/GLExtensionScanner.hpp
+
 GLWM_Hdeps := GLWindowManager main
 $(patsubst %, obj/%.o, ${GLWM_Hdeps}): include/GLWindowManager.hpp
 

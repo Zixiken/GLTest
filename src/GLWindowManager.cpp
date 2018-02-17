@@ -19,6 +19,11 @@ int GLWindowManager::printError(Display * d, XErrorEvent * e) {
     return e->error_code;
 }
 
+void GLWindowManager::defaultLoopFunc() {
+    glClearColor(.5, .5, .5, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
 void GLWindowManager::cleanup() {
     XCloseDisplay(d);
     cout << "Closed display." << endl;
@@ -36,26 +41,30 @@ bool GLWindowManager::connectToDisplay() {
     return true;
 }
 
+void GLWindowManager::selectScreen() {
+    cout << "Default screen: " << (s = DefaultScreen(d)) << endl;
+}
+
 bool GLWindowManager::checkGLXVersion() {
-    if(!glXQueryVersion(d, &glXMajor, &glXMinor)) {
+    int32_t major, minor;
+
+    gles->scanGLXExtensions(d, s);
+    gles->getGLXVersion(major, minor);
+    if(!major && !minor) {
         cout << "Error: could not query GLX version." << endl;
         error = GLWM_GLX_QUERY_FAIL;
         return false;
     }
 
-    if((glXMajor == 1 && glXMinor < 3) || glXMajor < 1) {
-        cout << "Error: GLX version is " << glXMajor << '.' << glXMinor
+    if((major == 1 && minor < 3) || major < 1) {
+        cout << "Error: GLX version is " << major << '.' << minor
                 << ", requires at least 1.3." << endl;
         error = GLWM_GLX_BAD_VERSION;
         return false;
     }
 
-    cout << "GLX version: " << glXMajor << '.' << glXMinor << endl;
+    cout << "GLX version: " << major << '.' << minor << endl;
     return true;
-}
-
-void GLWindowManager::selectScreen() {
-    cout << "Default screen: " << (s = DefaultScreen(d)) << endl;
 }
 
 void GLWindowManager::selectDepth() {
@@ -106,27 +115,6 @@ bool GLWindowManager::selectFBConfig() {
     return true;
 }
 
-void GLWindowManager::getGLXExtensions() {
-    glxExts = glXQueryExtensionsString(d, s);
-    cout << "Supported GLX extensions:\n" << glxExts << endl;
-}
-
-bool GLWindowManager::glxExtSupported(const char * ext) {
-    const char * loc = NULL, * start = glxExts, * after;
-    size_t len = strlen(ext);
-
-    while(1) {
-        if(!(loc = strstr(start, ext))) return false;
-        else {
-            after = loc+len;
-            if((loc == start || *(loc-1) == ' ')
-                    && (*after == ' ' || *after == 0))
-                return true;
-            else start = after;
-        }
-    }
-}
-
 bool GLWindowManager::createContext() {
     static const char * ext = "GLX_ARB_create_context";
     static int attribs[] = {
@@ -137,7 +125,7 @@ bool GLWindowManager::createContext() {
 
     PFNGLXCREATECONTEXTATTRIBSARBPROC _glXCreateContextAttribsARB = NULL;
 
-    if(!glxExtSupported(ext) || !(_glXCreateContextAttribsARB =
+    if(!gles->isExtensionSupported(ext) || !(_glXCreateContextAttribsARB =
             (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB(
                     (const GLubyte *)"glXCreateContextAttribsARB"))) {
         cout << "Error: GLX extension " << ext << " is not supported." << endl;
@@ -163,12 +151,13 @@ bool GLWindowManager::createWindow() {
     XSetWindowAttributes attrs;
 
     attrs.background_pixel = 0;
-    attrs.event_mask = StructureNotifyMask;
+    //attrs.event_mask = StructureNotifyMask;
     attrs.colormap = XCreateColormap(d, rootW, vi->visual, AllocNone);
 
-    xW = XCreateWindow(d, rootW, 0, 0, 100, 100, 0, depth, InputOutput,
-            vi->visual, CWBackPixel|CWEventMask|CWColormap, &attrs);
+    xW = XCreateWindow(d, rootW, 0, 0, 640, 640, 0, depth, InputOutput,
+            vi->visual, CWBackPixel|CWColormap, &attrs);
     XFree(vi);
+    XSync(d, False);
     if(xError || !xW) {
         cout << "Error creating X window." << endl;
         error = GLWM_X_CREATE_WINDOW_FAIL;
@@ -177,6 +166,7 @@ bool GLWindowManager::createWindow() {
     cout << "Created X window." << endl;
 
     glxW = glXCreateWindow(d, fbc, xW, NULL);
+    XSync(d, False);
     if(xError || !glxW) {
         cout << "Error creating GLX window." << endl;
         error = GLWM_GLX_CREATE_WINDOW_FAIL;
@@ -187,23 +177,41 @@ bool GLWindowManager::createWindow() {
     return true;
 }
 
+bool GLWindowManager::setWindowProps() {
+    protos = XInternAtom(d, "WM_PROTOCOLS", False);
+    del = XInternAtom(d, "WM_DELETE_WINDOW", False);
+    return XSetWMProtocols(d, xW, &del, 1);
+}
+
+void GLWindowManager::handleEvents() {
+    XEvent e;
+
+    while(XEventsQueued(d, QueuedAfterReading)) {
+        XNextEvent(d, &e);
+        if(e.type == ClientMessage) {
+            if(e.xclient.message_type == protos &&
+                    (Atom)(e.xclient.data.l[0]) == del)
+                doLoop = false;
+        } else cout << "Message type " << e.type << endl;
+    }
+}
+
 bool GLWindowManager::start() {
     if(started) return false;
 
     XSetErrorHandler(GLWindowManager::printError);
     if(!connectToDisplay()) return false;
+    selectScreen();
     if(!checkGLXVersion()) {
         cleanup();
         return false;
     }
-    selectScreen();
     selectDepth();
     if(!selectFBConfig()) {
         cleanup();
         return false;
     }
-    getGLXExtensions();
-    if(!createContext() || !createWindow()) {
+    if(!createContext() || !createWindow() || !setWindowProps()) {
         cleanup();
         return false;
     }
@@ -277,3 +285,16 @@ bool GLWindowManager::getXError(XErrorEvent * e) {
     if(xError && e != NULL) *e = lastError;
     return xError;
 }
+
+void GLWindowManager::setLoopFunction(void func()) {loopFunc = func;}
+
+void GLWindowManager::loop() {
+    doLoop = true;
+    while(doLoop) {
+        loopFunc();
+        swapBuffers();
+        handleEvents();
+    }
+}
+
+GLWindowManager::GLWindowManager(GLExtensionScanner * scanner): gles(scanner) {}
