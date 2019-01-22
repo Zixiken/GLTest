@@ -1,43 +1,49 @@
+#include "defs.hpp"
 #include "GLWindowManager.hpp"
-#include <cmath>
+#include "MatrixFactory.hpp"
 
 using namespace std;
 
-typedef struct {GLfloat x, y, z;} vec3;
-typedef struct {GLfloat x, y, z, w;} vec4;
-typedef struct {vec4 x, y, z, w;} mat4;
-
 GLExtensionScanner gles;
 GLWindowManager glwm(&gles);
-vec3 data[3] = {
-    {-1.0f, -1.0f, 0.0f},
-    {1.0f, -1.0f, 0.0f},
+MatrixFactory world;
+vec3 data[] = {
+    {-1.0f, -1.0f, -1.0f},
+    {1.0f, -1.0f, -1.0f},
+    {0.0f, -1.0f, 1.0f},
     {0.0f, 1.0f, 0.0f}
 };
-mat4 world = {
-    {1.0f, 0.0f, 0.0f, 0.0f},
-    {0.0f, 1.0f, 0.0f, 0.0f},
-    {0.0f, 0.0f, 1.0f, 0.0f},
-    {0.0f, 0.0f, 0.0f, 1.0f}
+GLubyte indices[][3] = {
+    {0, 1, 2},
+    {0, 1, 3},
+    {0, 2, 3},
+    {1, 2, 3}
+};
+vec3 colorData[] = {
+    {1.0f, 0.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {0.0f, 0.0f, 1.0f},
+    {1.0f, 1.0f, 1.0f}
 };
 
-GLuint VBO, VAO, shaderProg;
-GLint worldLoc, rgbLoc;
+GLuint IBO, VBO, CBO, VAO, shaderProg;
+GLint worldLoc;
 const GLchar * vProg = (const GLchar *)
 "#version 330\n\
 layout (location = 0) in vec3 position;\n\
+layout (location = 1) in vec3 color;\n\
 uniform mat4 world;\n\
-out vec3 rgb;\n\
+out vec3 fragColor;\n\
 void main() {\n\
     gl_Position = world * vec4(position, 1.0);\n\
-    rgb = vec3((gl_Position.x+1)/2, (gl_Position.y+1)/2, world[0][0]);\n\
+    fragColor = color;\n\
 }";
 const GLchar * fProg = (const GLchar *)
 "#version 330\n\
-in vec3 rgb;\n\
+in vec3 fragColor;\n\
 out vec4 color;\n\
 void main() {\n\
-    color = vec4(rgb, 1.0f);\n\
+    color = vec4(fragColor, 1.0f);\n\
 }";
 
 // GL 1.5
@@ -133,19 +139,12 @@ bool initPointers() {
 }
 
 void loop() {
-    static float scale = 0.0f, scale2 = 0.0f;
+    static float scale = 0.0f;
     scale += 0.01f;
-    scale2 += 0.023f;
-    float sine = sin(scale), cosine = cos(scale), sine2 = sin(scale2), cosine2 = cos(scale2);
-    world.x.w = sine2*0.5f;
-    world.y.w = cosine2*0.5f;
-    world.x.x = cosine*sine2;
-    world.x.y = -sine*sine;
-    world.y.x = sine*sine2;
-    world.y.y = cosine*sine;
-    _glUniformMatrix4fv(worldLoc, 1, GL_TRUE, (const GLfloat *)&world);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    world.setRotate(scale, 0.0f, 0.0f);
+    _glUniformMatrix4fv(worldLoc, 1, GL_TRUE, (const GLfloat *)(world.build()));
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
 }
 
 bool compileShader(const GLchar * prog, GLuint shaderObj) {
@@ -216,6 +215,7 @@ int32_t main(int32_t argc, const char * argv[]) {
         exit(1);
     }
 
+    glEnable(GL_DEPTH_TEST);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     _glGenVertexArrays(1, &VAO);
     _glBindVertexArray(VAO);
@@ -224,6 +224,17 @@ int32_t main(int32_t argc, const char * argv[]) {
     _glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
     _glEnableVertexAttribArray(0);
     _glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    _glGenBuffers(1, &IBO);
+    _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    _glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    _glGenBuffers(1, &CBO);
+    _glBindBuffer(GL_ARRAY_BUFFER, CBO);
+    _glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
+    _glEnableVertexAttribArray(1);
+    _glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    world.setScale(1.0f, 1.0f, 1.0f);
+    world.setTranslate(0.0f, 0.0f, 0.0f);
 
     glwm.setLoopFunction(&loop);
     glwm.showWindow();

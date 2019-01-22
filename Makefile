@@ -10,6 +10,12 @@ ${outName}: ${objs}
 ${objs}: obj/%.o: src/%.cpp
 	${CXX} -c ${CXXFLAGS} -o $@ $<
 
+MatrixFactory_Hdeps := MatrixFactory main
+$(patsubst %, obj/%.o, ${defs_Hdeps}): include/MatrixFactory.hpp
+
+defs_Hdeps := defs MatrixFactory main 
+$(patsubst %, obj/%.o, ${defs_Hdeps}): include/defs.hpp
+
 GLES_Hdeps := GLExtensionScanner GLWindowManager 
 $(patsubst %, obj/%.o, ${GLES_Hdeps}): include/GLExtensionScanner.hpp
 
