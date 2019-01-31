@@ -65,13 +65,16 @@ void MatrixFactory::getRotateScaleMatrix() {
         {0.0f, 1.0f, 0.0f, 0.0f},
         {ySin, 0.0f, yCos, 0.0f},
         {0.0f, 0.0f, 0.0f, 1.0f}
-    }, rotZMatrix = {
+    };
+    matrix = {
         {zCos, -zSin, 0.0f, 0.0f},
         {zSin, zCos, 0.0f, 0.0f},
         {0.0f, 0.0f, 1.0f, 0.0f},
         {0.0f, 0.0f, 0.0f, 1.0f}
     };
-    matrix = rotXMatrix * rotYMatrix * rotZMatrix * scaleMatrix;
+    matrix *= rotYMatrix;
+    matrix *= rotXMatrix;
+    matrix *= scaleMatrix;
 }
 
 void MatrixFactory::addTranslate() {

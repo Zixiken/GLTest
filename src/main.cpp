@@ -8,10 +8,10 @@ GLExtensionScanner gles;
 GLWindowManager glwm(&gles);
 MatrixFactory world;
 vec3 data[] = {
-    {-1.0f, -1.0f, -1.0f},
-    {1.0f, -1.0f, -1.0f},
-    {0.0f, -1.0f, 1.0f},
-    {0.0f, 1.0f, 0.0f}
+    {-0.5f, -0.5f, -0.5f},
+    {0.5f, -0.5f, -0.5f},
+    {0.0f, -0.5f, 0.5f},
+    {0.0f, 0.5f, 0.0f}
 };
 GLubyte indices[][3] = {
     {0, 1, 2},
@@ -141,7 +141,8 @@ bool initPointers() {
 void loop() {
     static float scale = 0.0f;
     scale += 0.01f;
-    world.setRotate(scale, 0.0f, 0.0f);
+    if(scale >= 3.14f) scale = 0.0f;
+    world.setRotate(scale, 0.0f, scale);
     _glUniformMatrix4fv(worldLoc, 1, GL_TRUE, (const GLfloat *)(world.build()));
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
