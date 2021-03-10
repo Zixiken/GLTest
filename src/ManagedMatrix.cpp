@@ -1,42 +1,42 @@
-#include "MatrixFactory.hpp"
+#include "ManagedMatrix.hpp"
 #include <cmath>
 
 using namespace std;
 
-void MatrixFactory::setTranslate(GLfloat x, GLfloat y, GLfloat z) {
+void ManagedMatrix::setTranslate(GLfloat x, GLfloat y, GLfloat z) {
     translate.x = x;
     translate.y = y;
     translate.z = z;
     translateDirty = true;
 }
-void MatrixFactory::setTranslate(vec3 v) {
+void ManagedMatrix::setTranslate(vec3 v) {
     translate = v;
     translateDirty = true;
 }
 
-void MatrixFactory::setRotate(GLfloat x, GLfloat y, GLfloat z) {
+void ManagedMatrix::setRotate(GLfloat x, GLfloat y, GLfloat z) {
     rotate.x = x;
     rotate.y = y;
     rotate.z = z;
     scaleRotateDirty = true;
 }
-void MatrixFactory::setRotate(vec3 v) {
+void ManagedMatrix::setRotate(vec3 v) {
     rotate = v;
     scaleRotateDirty = true;
 }
 
-void MatrixFactory::setScale(GLfloat x, GLfloat y, GLfloat z) {
+void ManagedMatrix::setScale(GLfloat x, GLfloat y, GLfloat z) {
     scale.x = x;
     scale.y = y;
     scale.z = z;
     scaleRotateDirty = true;
 }
-void MatrixFactory::setScale(vec3 v) {
+void ManagedMatrix::setScale(vec3 v) {
     scale = v;
     scaleRotateDirty = true;
 }
 
-mat4 * MatrixFactory::build() {
+mat4 * ManagedMatrix::build() {
     if(scaleRotateDirty) {
         getRotateScaleMatrix();
         addTranslate();
@@ -46,7 +46,7 @@ mat4 * MatrixFactory::build() {
     return &matrix;
 }
 
-void MatrixFactory::getRotateScaleMatrix() {
+void ManagedMatrix::getRotateScaleMatrix() {
     GLfloat xCos = cos(rotate.x), xSin = sin(rotate.x),
             yCos = cos(rotate.y), ySin = sin(rotate.y),
             zCos = cos(rotate.z), zSin = sin(rotate.z);
@@ -77,7 +77,7 @@ void MatrixFactory::getRotateScaleMatrix() {
     matrix *= scaleMatrix;
 }
 
-void MatrixFactory::addTranslate() {
+void ManagedMatrix::addTranslate() {
     matrix.x.w = translate.x;
     matrix.y.w = translate.y;
     matrix.z.w = translate.z;

@@ -1,8 +1,8 @@
-#ifndef MATRIXFACTORY_H
-#define MATRIXFACTORY_H
+#ifndef MANAGEDMATRIX_H
+#define MANAGEDMATRIX_H
 #include "defs.hpp"
 
-class MatrixFactory {
+class ManagedMatrix {
 public:
     mat4 * build();
 

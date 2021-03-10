@@ -1,12 +1,15 @@
+#include <cstdlib>
+#include <iomanip>
 #include "defs.hpp"
 #include "GLWindowManager.hpp"
-#include "MatrixFactory.hpp"
+#include "ManagedMatrix.hpp"
+#include "CliManager.hpp"
 
 using namespace std;
 
 GLExtensionScanner gles;
 GLWindowManager glwm(&gles);
-MatrixFactory world;
+ManagedMatrix world;
 vec3 data[] = {
     {-0.5f, -0.5f, -0.5f},
     {0.5f, -0.5f, -0.5f},
@@ -186,7 +189,7 @@ void initShaderProgram() {
     _glDeleteShader(vShaderObj);
     _glDeleteShader(fShaderObj);
     _glValidateProgram(shaderProg);
-    cout << hex << glGetError() << endl;
+    cout << hex << glGetError() << dec << endl;
     _glUseProgram(shaderProg);
 }
 
@@ -239,6 +242,34 @@ int32_t main(int32_t argc, const char * argv[]) {
 
     glwm.setLoopFunction(&loop);
     glwm.showWindow();
+
+    if(!initManager(1, 32, 4, 3)) {
+        cerr << "Terminal too small or could not get terminal info, exiting" << endl;
+	glwm.stop();
+        exit(1);
+    }
+    unsigned short height = getHeight();
+    float x = 0.3456789123, y = 0.2198745837, z = 0.8736517282;
+    cout << setprecision(6);
+    setPos(height-4, 1);
+    cout << "Q -Z   W +Y   E +Z";
+    setPos(height-2, 1);
+    cout << "A -X   S -Y   D +X";
+    setPos(height-4, 2, 0, 21);
+    cout << INVERSE << "Translate:";
+    setCol(3);
+    cout << x << ' ' << y << ' ' << z << NORMAL;
+    setPos(height-3, 2, 0, 25);
+    cout << "Scale:";
+    setCol(3);
+    cout << x << ' ' << y << ' ' << z;
+    setPos(height-2, 2, 0, 24);
+    cout << "Rotate:";
+    setCol(3);
+    cout << x << ' ' << y << ' ' << z << flush;
+    setPos(height-1, 1);
+
     glwm.loop();
+    closeManager();
     glwm.stop();
 }
