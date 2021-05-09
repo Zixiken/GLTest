@@ -152,11 +152,11 @@ bool GLWindowManager::createWindow() {
     XSetWindowAttributes attrs;
 
     attrs.background_pixel = 0;
-    //attrs.event_mask = StructureNotifyMask;
+    attrs.event_mask = KeyPressMask | KeyReleaseMask;
     attrs.colormap = XCreateColormap(d, rootW, vi->visual, AllocNone);
 
     xW = XCreateWindow(d, rootW, 0, 0, 640, 640, 0, depth, InputOutput,
-            vi->visual, CWBackPixel|CWColormap, &attrs);
+            vi->visual, CWBackPixel|CWColormap|CWEventMask, &attrs);
     XFree(vi);
     XSync(d, False);
     if(xError || !xW) {
@@ -193,7 +193,8 @@ void GLWindowManager::handleEvents() {
             if(e.xclient.message_type == protos &&
                     (Atom)(e.xclient.data.l[0]) == del)
                 doLoop = false;
-        } else cout << "Message type " << e.type << endl;
+        }
+        for(auto i = eventHandlers.begin(); i != eventHandlers.end(); i++) {(*i)(e);}
     }
 }
 
@@ -287,7 +288,7 @@ bool GLWindowManager::getXError(XErrorEvent * e) {
     return xError;
 }
 
-void GLWindowManager::setLoopFunction(void func()) {loopFunc = func;}
+void GLWindowManager::setLoopFunction(void (* func)()) {loopFunc = func;}
 
 void GLWindowManager::loop() {
     doLoop = true;
@@ -298,4 +299,16 @@ void GLWindowManager::loop() {
     }
 }
 
-GLWindowManager::GLWindowManager(GLExtensionScanner * scanner): gles(scanner) {}
+void GLWindowManager::addEventHandler(eventHandlerFunc func) {
+    for(auto i = eventHandlers.begin(); i != eventHandlers.end(); i++)
+        if(*i == func) return;
+    eventHandlers.push_front(func);
+}
+
+void GLWindowManager::removeEventHandler(eventHandlerFunc func) {eventHandlers.remove(func);}
+
+void GLWindowManager::stopLoop() {doLoop = false;}
+
+GLWindowManager::GLWindowManager(GLExtensionScanner * scanner): gles(scanner) {
+    eventHandlers = forward_list<eventHandlerFunc>();
+}

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstring>
+#include <forward_list>
 #include <GL/glx.h>
 #include "GLExtensionScanner.hpp"
 
@@ -22,6 +23,8 @@
 
 class GLWindowManager {
 public:
+    typedef void (* eventHandlerFunc)(XEvent &);
+
     bool start();
     void stop();
     bool showWindow();
@@ -30,8 +33,11 @@ public:
     bool swapBuffers();
     uint8_t getError();
     bool getXError(XErrorEvent *);
-    void setLoopFunction(void ());
+    void setLoopFunction(void (*)());
     void loop();
+    void addEventHandler(eventHandlerFunc);
+    void removeEventHandler(eventHandlerFunc);
+    void stopLoop();
 
     GLWindowManager(GLExtensionScanner *);
 
@@ -50,6 +56,7 @@ private:
     int32_t depth, s;
     GLExtensionScanner * gles;
     void (* loopFunc)() = &defaultLoopFunc;
+    std::forward_list<eventHandlerFunc> eventHandlers;
 
     static int printError(Display *, XErrorEvent *);
     static void defaultLoopFunc();

@@ -193,6 +193,8 @@ void initShaderProgram() {
     _glUseProgram(shaderProg);
 }
 
+void handleKeys(XEvent & e) {if(e.type == KeyPress && XLookupKeysym(&e.xkey, 0) == XK_q) glwm.stopLoop();}
+
 int32_t main(int32_t argc, const char * argv[]) {
     GLint glMajor, glMinor;
 
@@ -269,6 +271,7 @@ int32_t main(int32_t argc, const char * argv[]) {
     cout << x << ' ' << y << ' ' << z << flush;
     setPos(height-1, 1);
 
+    glwm.addEventHandler(handleKeys);
     glwm.loop();
     closeManager();
     glwm.stop();
