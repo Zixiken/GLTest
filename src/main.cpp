@@ -7,6 +7,9 @@
 
 using namespace std;
 
+bool doLoop = false;
+unsigned short height;
+
 GLExtensionScanner gles;
 GLWindowManager glwm(&gles);
 ManagedMatrix world;
@@ -141,16 +144,6 @@ bool initPointers() {
     return true;
 }
 
-void loop() {
-    static float scale = 0.0f;
-    scale += 0.01f;
-    if(scale >= 3.14f) scale = 0.0f;
-    world.setRotate(scale, 0.0f, scale);
-    _glUniformMatrix4fv(worldLoc, 1, GL_TRUE, (const GLfloat *)(world.build()));
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
-}
-
 bool compileShader(const GLchar * prog, GLuint shaderObj) {
     GLint l = strlen(prog);
     _glShaderSource(shaderObj, 1, &prog, &l);
@@ -193,7 +186,53 @@ void initShaderProgram() {
     _glUseProgram(shaderProg);
 }
 
-void handleKeys(XEvent & e) {if(e.type == KeyPress && XLookupKeysym(&e.xkey, 0) == XK_q) glwm.stopLoop();}
+void updateDisplay() {
+    setPos(height-4, 1);
+    cout << "Q -Z   W +Y   E +Z";
+    setPos(height-2, 1);
+    cout << "A -X   S -Y   D +X";
+
+    setPos(height-4, 2, 0, 21);
+    cout << INVERSE << "Translate:";
+    setCol(3);
+    vec3 tmp = world.getTranslate();
+    cout << tmp.x << ' ' << tmp.y << ' ' << tmp.z << NORMAL;
+
+    setPos(height-3, 2, 0, 25);
+    cout << "Scale:";
+    setCol(3);
+    tmp = world.getScale();
+    cout << tmp.x << ' ' << tmp.y << ' ' << tmp.z;
+
+    setPos(height-2, 2, 0, 24);
+    cout << "Rotate:";
+    setCol(3);
+    tmp = world.getRotate();
+    cout << tmp.x << ' ' << tmp.y << ' ' << tmp.z << flush;
+    setPos(height-1, 1);
+}
+
+void loop() {
+    static float scale = 0.0f;
+    scale += 0.01f;
+    if(scale >= 3.14f) scale = 0.0f;
+    world.setRotate(scale, 0.0f, scale);
+    _glUniformMatrix4fv(worldLoc, 1, GL_TRUE, (const GLfloat *)(world.build()));
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
+    glwm.swapBuffers();
+    updateDisplay();
+}
+
+void handleKeys(XEvent & e) {
+    if(e.type == KeyPress) {
+        KeySym keysym = XLookupKeysym(&e.xkey, 0);
+       	switch (keysym) {
+            case XK_Escape: glwm.stopLoop(); break;
+            case XK_space: glwm.setLoopFunction(doLoop ? NULL : &loop); doLoop = !doLoop; break;
+        }
+    }
+}
 
 int32_t main(int32_t argc, const char * argv[]) {
     GLint glMajor, glMinor;
@@ -242,7 +281,6 @@ int32_t main(int32_t argc, const char * argv[]) {
     world.setScale(1.0f, 1.0f, 1.0f);
     world.setTranslate(0.0f, 0.0f, 0.0f);
 
-    glwm.setLoopFunction(&loop);
     glwm.showWindow();
 
     if(!initManager(1, 32, 4, 3)) {
@@ -250,29 +288,13 @@ int32_t main(int32_t argc, const char * argv[]) {
 	glwm.stop();
         exit(1);
     }
-    unsigned short height = getHeight();
-    float x = 0.3456789123, y = 0.2198745837, z = 0.8736517282;
+
+    height = getHeight();
     cout << setprecision(6);
-    setPos(height-4, 1);
-    cout << "Q -Z   W +Y   E +Z";
-    setPos(height-2, 1);
-    cout << "A -X   S -Y   D +X";
-    setPos(height-4, 2, 0, 21);
-    cout << INVERSE << "Translate:";
-    setCol(3);
-    cout << x << ' ' << y << ' ' << z << NORMAL;
-    setPos(height-3, 2, 0, 25);
-    cout << "Scale:";
-    setCol(3);
-    cout << x << ' ' << y << ' ' << z;
-    setPos(height-2, 2, 0, 24);
-    cout << "Rotate:";
-    setCol(3);
-    cout << x << ' ' << y << ' ' << z << flush;
-    setPos(height-1, 1);
+    updateDisplay();
 
     glwm.addEventHandler(handleKeys);
-    glwm.loop();
+    glwm.startLoop();
     closeManager();
     glwm.stop();
 }

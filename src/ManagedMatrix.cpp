@@ -3,6 +3,8 @@
 
 using namespace std;
 
+vec3 ManagedMatrix::getTranslate() {return translate;}
+
 void ManagedMatrix::setTranslate(GLfloat x, GLfloat y, GLfloat z) {
     translate.x = x;
     translate.y = y;
@@ -14,6 +16,8 @@ void ManagedMatrix::setTranslate(vec3 v) {
     translateDirty = true;
 }
 
+vec3 ManagedMatrix::getRotate() {return rotate;}
+
 void ManagedMatrix::setRotate(GLfloat x, GLfloat y, GLfloat z) {
     rotate.x = x;
     rotate.y = y;
@@ -24,6 +28,8 @@ void ManagedMatrix::setRotate(vec3 v) {
     rotate = v;
     scaleRotateDirty = true;
 }
+
+vec3 ManagedMatrix::getScale() {return scale;}
 
 void ManagedMatrix::setScale(GLfloat x, GLfloat y, GLfloat z) {
     scale.x = x;

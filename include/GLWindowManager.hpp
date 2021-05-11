@@ -34,7 +34,7 @@ public:
     uint8_t getError();
     bool getXError(XErrorEvent *);
     void setLoopFunction(void (*)());
-    void loop();
+    void startLoop();
     void addEventHandler(eventHandlerFunc);
     void removeEventHandler(eventHandlerFunc);
     void stopLoop();

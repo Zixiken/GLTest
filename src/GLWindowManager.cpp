@@ -19,10 +19,7 @@ int GLWindowManager::printError(Display * d, XErrorEvent * e) {
     return e->error_code;
 }
 
-void GLWindowManager::defaultLoopFunc() {
-    glClearColor(.5, .5, .5, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-}
+void GLWindowManager::defaultLoopFunc() {}
 
 void GLWindowManager::cleanup() {
     XCloseDisplay(d);
@@ -185,7 +182,7 @@ bool GLWindowManager::setWindowProps() {
 }
 
 void GLWindowManager::handleEvents() {
-    XEvent e;
+    XEvent e, n;
 
     while(XEventsQueued(d, QueuedAfterReading)) {
         XNextEvent(d, &e);
@@ -193,6 +190,12 @@ void GLWindowManager::handleEvents() {
             if(e.xclient.message_type == protos &&
                     (Atom)(e.xclient.data.l[0]) == del)
                 doLoop = false;
+        } else if(e.type == KeyRelease && XEventsQueued(d, QueuedAfterFlush)) {
+            XPeekEvent(d, &n);
+            if(n.type == KeyPress && n.xkey.time == e.xkey.time && n.xkey.keycode == e.xkey.keycode) {
+                XNextEvent(d, &n);
+                continue;
+            }
         }
         for(auto i = eventHandlers.begin(); i != eventHandlers.end(); i++) {(*i)(e);}
     }
@@ -288,13 +291,15 @@ bool GLWindowManager::getXError(XErrorEvent * e) {
     return xError;
 }
 
-void GLWindowManager::setLoopFunction(void (* func)()) {loopFunc = func;}
+void GLWindowManager::setLoopFunction(void (* func)()) {
+    if(!func) loopFunc = defaultLoopFunc;
+    else loopFunc = func;
+}
 
-void GLWindowManager::loop() {
+void GLWindowManager::startLoop() {
     doLoop = true;
     while(doLoop) {
         loopFunc();
-        swapBuffers();
         handleEvents();
     }
 }
