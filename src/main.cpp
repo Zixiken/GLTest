@@ -1,5 +1,4 @@
 #include <cstdlib>
-#include <iomanip>
 #include "defs.hpp"
 #include "GLWindowManager.hpp"
 #include "ManagedMatrix.hpp"
@@ -196,19 +195,25 @@ void updateDisplay() {
     cout << INVERSE << "Translate:";
     setCol(3);
     vec3 tmp = world.getTranslate();
-    cout << tmp.x << ' ' << tmp.y << ' ' << tmp.z << NORMAL;
+    cout.width(10); cout << tmp.x << ' ';
+    cout.width(10); cout << tmp.y << ' ';
+    cout.width(10); cout << tmp.z << NORMAL;
 
     setPos(height-3, 2, 0, 25);
     cout << "Scale:";
     setCol(3);
     tmp = world.getScale();
-    cout << tmp.x << ' ' << tmp.y << ' ' << tmp.z;
+    cout.width(10); cout << tmp.x << ' ';
+    cout.width(10); cout << tmp.y << ' ';
+    cout.width(10); cout << tmp.z;
 
     setPos(height-2, 2, 0, 24);
     cout << "Rotate:";
     setCol(3);
     tmp = world.getRotate();
-    cout << tmp.x << ' ' << tmp.y << ' ' << tmp.z << flush;
+    cout.width(10); cout << tmp.x << ' ';
+    cout.width(10); cout << tmp.y << ' ';
+    cout.width(10); cout << tmp.z << flush;
     setPos(height-1, 1);
 }
 
@@ -290,7 +295,6 @@ int32_t main(int32_t argc, const char * argv[]) {
     }
 
     height = getHeight();
-    cout << setprecision(6);
     updateDisplay();
 
     glwm.addEventHandler(handleKeys);
