@@ -8,6 +8,7 @@ using namespace std;
 
 bool doLoop = false;
 unsigned short height;
+enum selection_t { translate, scale, rotate, total } selection = translate;
 
 GLExtensionScanner gles;
 GLWindowManager glwm(&gles);
@@ -184,6 +185,12 @@ void initShaderProgram() {
     cout << hex << glGetError() << dec << endl;
     _glUseProgram(shaderProg);
 }
+inline void printFloats(vec3 v) {
+    setCol(3);
+    cout.width(10); cout << v.x << ' ';
+    cout.width(10); cout << v.y << ' ';
+    cout.width(10); cout << v.z;
+}
 
 void updateDisplay() {
     setPos(height-4, 1);
@@ -192,41 +199,43 @@ void updateDisplay() {
     cout << "A -X   S -Y   D +X";
 
     setPos(height-4, 2, 0, 21);
-    cout << INVERSE << "Translate:";
-    setCol(3);
-    vec3 tmp = world.getTranslate();
-    cout.width(10); cout << tmp.x << ' ';
-    cout.width(10); cout << tmp.y << ' ';
-    cout.width(10); cout << tmp.z << NORMAL;
+    if(selection == translate) cout << INVERSE;
+    cout << "Translate:";
+    printFloats(world.getTranslate());
+    if(selection == translate) cout << NORMAL;
 
     setPos(height-3, 2, 0, 25);
+    if(selection == scale) cout << INVERSE;
     cout << "Scale:";
-    setCol(3);
-    tmp = world.getScale();
-    cout.width(10); cout << tmp.x << ' ';
-    cout.width(10); cout << tmp.y << ' ';
-    cout.width(10); cout << tmp.z;
+    printFloats(world.getScale());
+    if(selection == scale) cout << NORMAL;
 
     setPos(height-2, 2, 0, 24);
+    if(selection == rotate) cout << INVERSE;
     cout << "Rotate:";
-    setCol(3);
-    tmp = world.getRotate();
-    cout.width(10); cout << tmp.x << ' ';
-    cout.width(10); cout << tmp.y << ' ';
-    cout.width(10); cout << tmp.z << flush;
+    printFloats(world.getRotate());
+    if(selection == rotate) cout << NORMAL;
+
     setPos(height-1, 1);
+    cout.flush();
 }
 
-void loop() {
-    static float scale = 0.0f;
-    scale += 0.01f;
-    if(scale >= 3.14f) scale = 0.0f;
-    world.setRotate(scale, 0.0f, scale);
+void draw() {
     _glUniformMatrix4fv(worldLoc, 1, GL_TRUE, (const GLfloat *)(world.build()));
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
     glwm.swapBuffers();
     updateDisplay();
+}
+
+void loop() {
+    vec3 v = world.getRotate();
+    v.x = v.x+0.01f;
+    if(v.x >= 3.14f) v.x = 0.0f;
+    v.z = v.z+0.01f;
+    if(v.z >= 3.14f) v.z = 0.0f;
+    world.setRotate(v);
+    draw();
 }
 
 void handleKeys(XEvent & e) {
@@ -235,6 +244,7 @@ void handleKeys(XEvent & e) {
        	switch (keysym) {
             case XK_Escape: glwm.stopLoop(); break;
             case XK_space: glwm.setLoopFunction(doLoop ? NULL : &loop); doLoop = !doLoop; break;
+            case XK_Tab: selection = (selection_t)((selection+1)%total); updateDisplay(); break;
         }
     }
 }
@@ -285,6 +295,7 @@ int32_t main(int32_t argc, const char * argv[]) {
 
     world.setScale(1.0f, 1.0f, 1.0f);
     world.setTranslate(0.0f, 0.0f, 0.0f);
+    world.setRotate(0.0f, 0.0f, 0.0f);
 
     glwm.showWindow();
 
@@ -296,9 +307,10 @@ int32_t main(int32_t argc, const char * argv[]) {
 
     height = getHeight();
     updateDisplay();
-
+    draw();
     glwm.addEventHandler(handleKeys);
     glwm.startLoop();
+
     closeManager();
     glwm.stop();
 }
