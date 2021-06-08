@@ -298,9 +298,20 @@ void GLWindowManager::setLoopFunction(void (* func)()) {
 
 void GLWindowManager::startLoop() {
     doLoop = true;
+    clock_t time;
+    clock_t clocksPerFrame = CLOCKS_PER_SEC / 60;
+    struct timespec sleepTime;
+    sleepTime.tv_sec = 0;
+
     while(doLoop) {
+        time = clock();
         loopFunc();
         handleEvents();
+	time = clock()-time;
+        if(time < clocksPerFrame) {
+            sleepTime.tv_nsec = (float)(clocksPerFrame-time) / CLOCKS_PER_SEC * 1000000000;
+            nanosleep(&sleepTime, NULL);
+	}
     }
 }
 

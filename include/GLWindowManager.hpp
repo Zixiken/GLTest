@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <forward_list>
 #include <GL/glx.h>
 #include "GLExtensionScanner.hpp"
