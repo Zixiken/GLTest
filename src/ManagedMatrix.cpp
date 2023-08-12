@@ -1,3 +1,8 @@
+/**
+ * ManagedMatrix.cpp
+ * 0.1
+ * Michael Zanga
+ */
 #include "ManagedMatrix.hpp"
 #include <cmath>
 
@@ -42,6 +47,8 @@ void ManagedMatrix::setScale(vec3 v) {
     scaleRotateDirty = true;
 }
 
+// Avoid recalculating the rotate*scale transform matrix if only
+// the translate vector has changed.
 mat4 * ManagedMatrix::build() {
     if(scaleRotateDirty) {
         getRotateScaleMatrix();
@@ -72,6 +79,7 @@ void ManagedMatrix::getRotateScaleMatrix() {
         {ySin, 0.0f, yCos, 0.0f},
         {0.0f, 0.0f, 0.0f, 1.0f}
     };
+    // Start with the Z rotation matrix here
     matrix = {
         {zCos, -zSin, 0.0f, 0.0f},
         {zSin, zCos, 0.0f, 0.0f},

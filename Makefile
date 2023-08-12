@@ -1,11 +1,11 @@
 CXXFLAGS := -I include -O2 -Wall -Werror -flto -fno-fat-lto-objects -g
-LDLIBS := -lGL -lX11
+LDFLAGS := -lGL -lX11
 
 outName := test
 objs := $(patsubst src/%.cpp, obj/%.o, $(wildcard src/*.cpp))
 
 ${outName}: ${objs}
-	${CXX} ${objs} ${CXXFLAGS} ${LDLIBS} -o $@
+	${CXX} ${objs} ${CXXFLAGS} ${LDFLAGS} -o $@
 
 ${objs}: obj/%.o: src/%.cpp
 	${CXX} -c ${CXXFLAGS} -o $@ $<

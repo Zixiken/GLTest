@@ -4,7 +4,11 @@
 #include "ManagedMatrix.hpp"
 #include "CliManager.hpp"
 
-using namespace std;
+using std::cerr;
+using std::cout;
+using std::dec;
+using std::endl;
+using std::hex;
 
 bool doLoop = false;
 unsigned short height;
@@ -162,7 +166,7 @@ void initShaderProgram() {
     shaderProg = _glCreateProgram();
     GLuint vShaderObj = _glCreateShader(GL_VERTEX_SHADER), fShaderObj = _glCreateShader(GL_FRAGMENT_SHADER);
     if(!(compileShader(vProg, vShaderObj) && compileShader(fProg, fShaderObj))) {
-        glwm.stop();
+        glwm.deinit();
         exit(1);
     }
     _glAttachShader(shaderProg, vShaderObj);
@@ -174,7 +178,7 @@ void initShaderProgram() {
         GLchar log[1024];
         _glGetProgramInfoLog(shaderProg, sizeof(log), NULL, log);
         cerr << "Error linking shader:\n" << log << endl;
-        glwm.stop();
+        glwm.deinit();
         exit(1);
     }
     _glDetachShader(shaderProg, vShaderObj);
@@ -252,8 +256,8 @@ void handleKeys(XEvent & e) {
 int32_t main(int32_t argc, const char * argv[]) {
     GLint glMajor, glMinor;
 
-    if(!glwm.start()) {
-        cerr << "Could not start window manager!\n";
+    if(!glwm.init()) {
+        cerr << "Could not initialize window manager!\n";
         cerr << "Error code: " << glwm.getError() << endl;
         exit(1);
     }
@@ -264,14 +268,14 @@ int32_t main(int32_t argc, const char * argv[]) {
     cout << "GL version " << glMajor << '.' << glMinor << endl;
     if(!initPointers()) {
         cout << "Failed to init pointers" << endl;
-        glwm.stop();
+        glwm.deinit();
         exit(1);
     }
 
     initShaderProgram();
     if((worldLoc = _glGetUniformLocation(shaderProg, "world")) == -1) {
         cerr << "Could not get uniform location!" << endl;
-        glwm.stop();
+        glwm.deinit();
         exit(1);
     }
 
@@ -301,7 +305,7 @@ int32_t main(int32_t argc, const char * argv[]) {
 
     if(!initManager(1, 32, 4, 3)) {
         cerr << "Terminal too small or could not get terminal info, exiting" << endl;
-	glwm.stop();
+	glwm.deinit();
         exit(1);
     }
 
@@ -312,5 +316,5 @@ int32_t main(int32_t argc, const char * argv[]) {
     glwm.startLoop();
 
     closeManager();
-    glwm.stop();
+    glwm.deinit();
 }

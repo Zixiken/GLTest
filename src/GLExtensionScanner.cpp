@@ -1,7 +1,14 @@
+/**
+ * GLExtensionScanner.cpp
+ * 0.1
+ * Michael Zanga
+ */
 #include "GLExtensionScanner.hpp"
 
 using namespace std;
 
+// This is an array of all GL and GLX extensions (probably out of date now),
+// sorted alphabetically for searching purposes
 const char * const GLExtensionScanner::extensions[] = {
     "GLX_3DFX_multisample",
     "GLX_AMD_gpu_association",
@@ -682,6 +689,8 @@ void GLExtensionScanner::scanGLXExtensions(Display * d, int32_t s) {
     const char * extStr = glXQueryExtensionsString(d, s);
     if(!*extStr) return;
 
+    // Extension string is space-separated, handle the one at the head of
+    // extStr and then update extStr to the beginning of the next extension
     uint16_t index;
     const char * curEnd;
     for(curEnd = extStr; *curEnd; curEnd++) {
@@ -697,7 +706,9 @@ void GLExtensionScanner::scanGLXExtensions(Display * d, int32_t s) {
     }
 }
 
+//TODO: find a way to not have the hardcoded indexes of the GL version info
 void GLExtensionScanner::scanGLExtensions() {
+    // Handle 2 methods of getting GL version information (new vs. old)
     glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
     if(glGetError() != GL_INVALID_ENUM) glGetIntegerv(GL_MINOR_VERSION, &glMinor);
     else {
@@ -728,6 +739,7 @@ void GLExtensionScanner::scanGLExtensions() {
     const char * extStr;
     uint16_t index;
 
+    // Handle 2 methods of extension scanning (new vs. old)
     if(glMajor >= 3) {
         PFNGLGETSTRINGIPROC _glGetStringi = NULL;
         if(!(_glGetStringi = (PFNGLGETSTRINGIPROC)glXGetProcAddressARB(
@@ -740,6 +752,7 @@ void GLExtensionScanner::scanGLExtensions() {
             if(index != UINT16_MAX) extSupported[index] = GL_TRUE;
         }
     } else {
+        // Old method is same for GLX extension scanning
         extStr = (const char *)glGetString(GL_EXTENSIONS);
         if(!*extStr) return;
 
@@ -758,6 +771,8 @@ void GLExtensionScanner::scanGLExtensions() {
     }
 }
 
+// Find the given extension in the array with a binary search.
+// Return UINT16_MAX if not found
 uint16_t GLExtensionScanner::getExtensionIndex(const char * extStr) {
     uint16_t lo = 0, hi = NUM_EXTENSIONS-1, mid;
     int8_t res;
@@ -768,10 +783,12 @@ uint16_t GLExtensionScanner::getExtensionIndex(const char * extStr) {
         if(res < 0) hi = mid-1;
         else if(res > 0) lo = mid+1;
         else return mid;
+	// Not sure if the hi upper bound check is necessary
         if(lo > hi || hi >= NUM_EXTENSIONS) return UINT16_MAX;
     }
 }
 
+// Simple string comparison, returns -1 if s1 < s2, 1 if s1 > s2, 0 if s1 = s2
 int8_t GLExtensionScanner::compareExtensionStrings(const char * s1, const char * s2) {
     char c1, c2;
 

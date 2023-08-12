@@ -1,9 +1,16 @@
+/**
+ * defs.cpp
+ * 0.1
+ * Michael Zanga
+ */
 #include "defs.hpp"
 
 using namespace std;
 
 mat4 & mat4::operator*=(const mat4 & rhs) {
+    // Precalculate the result here...
     mat4 temp;
+    // I don't remember why this is here.
     if(&rhs != this) {
         temp.x.x = (x.x*rhs.x.x)+(x.y*rhs.y.x)+(x.z*rhs.z.x)+(x.w*rhs.w.x);
         temp.x.y = (x.x*rhs.x.y)+(x.y*rhs.y.y)+(x.z*rhs.z.y)+(x.w*rhs.w.y);
@@ -24,6 +31,7 @@ mat4 & mat4::operator*=(const mat4 & rhs) {
         temp.w.y = (w.x*rhs.x.y)+(w.y*rhs.y.y)+(w.z*rhs.z.y)+(w.w*rhs.w.y);
         temp.w.z = (w.x*rhs.x.z)+(w.y*rhs.y.z)+(w.z*rhs.z.z)+(w.w*rhs.w.z);
         temp.w.w = (w.x*rhs.x.w)+(w.y*rhs.y.w)+(w.z*rhs.z.w)+(w.w*rhs.w.w);
+	// ...and copy the result into this here
         *this = temp;
     }
     return *this;

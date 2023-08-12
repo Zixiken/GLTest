@@ -1,3 +1,12 @@
+/**
+ * GLWindowManager.cpp
+ * 0.1
+ * Michael Zanga
+ */
+#include <iostream>
+#include <cstdint>
+#include <cstring>
+#include <ctime>
 #include "GLWindowManager.hpp"
 
 using namespace std;
@@ -5,6 +14,7 @@ using namespace std;
 bool GLWindowManager::xError = false;
 XErrorEvent GLWindowManager::lastError;
 
+// This is used as the X error handler
 int GLWindowManager::printError(Display * d, XErrorEvent * e) {
     char buf[50];
     cout << "An X error occurred:\n";
@@ -93,6 +103,8 @@ bool GLWindowManager::selectFBConfig() {
         return false;
     }
 
+    // Search through the available FBConfigs for the multisample one with the
+    // most samples. If no multisample, the first in the list is used.
     for(int32_t i = 0; i < numConfigs; i++) {
         int32_t multisample, samples;
         glXGetFBConfigAttrib(d, configList[i], GLX_SAMPLE_BUFFERS, &multisample);
@@ -121,6 +133,7 @@ bool GLWindowManager::createContext() {
         None
     };
 
+    // We need the function to create a context first
     PFNGLXCREATECONTEXTATTRIBSARBPROC _glXCreateContextAttribsARB = NULL;
 
     if(!gles->isExtensionSupported(ext) || !(_glXCreateContextAttribsARB =
@@ -148,6 +161,8 @@ bool GLWindowManager::createWindow() {
     XVisualInfo * vi = glXGetVisualFromFBConfig(d, fbc);
     XSetWindowAttributes attrs;
 
+    // The window has a black background, captures key presses and releases,
+    // and comes with a colormap. Size is 640x640.
     attrs.background_pixel = 0;
     attrs.event_mask = KeyPressMask | KeyReleaseMask;
     attrs.colormap = XCreateColormap(d, rootW, vi->visual, AllocNone);
@@ -176,6 +191,7 @@ bool GLWindowManager::createWindow() {
 }
 
 bool GLWindowManager::setWindowProps() {
+    // Tell the window to listen to the close button
     protos = XInternAtom(d, "WM_PROTOCOLS", False);
     del = XInternAtom(d, "WM_DELETE_WINDOW", False);
     return XSetWMProtocols(d, xW, &del, 1);
@@ -184,56 +200,68 @@ bool GLWindowManager::setWindowProps() {
 void GLWindowManager::handleEvents() {
     XEvent e, n;
 
+    // Handle all events in the queue
     while(XEventsQueued(d, QueuedAfterReading)) {
         XNextEvent(d, &e);
+        // Stop the loop when the close button is pressed
         if(e.type == ClientMessage) {
             if(e.xclient.message_type == protos &&
                     (Atom)(e.xclient.data.l[0]) == del)
                 doLoop = false;
+        // Skip key presses and releases that are repeats from holding a key
         } else if(e.type == KeyRelease && XEventsQueued(d, QueuedAfterFlush)) {
             XPeekEvent(d, &n);
-            if(n.type == KeyPress && n.xkey.time == e.xkey.time && n.xkey.keycode == e.xkey.keycode) {
+            if(n.type == KeyPress
+            && n.xkey.time == e.xkey.time
+            && n.xkey.keycode == e.xkey.keycode) {
                 XNextEvent(d, &n);
                 continue;
             }
         }
-        for(auto i = eventHandlers.begin(); i != eventHandlers.end(); i++) {(*i)(e);}
+        // Send the event to all handlers in the list
+        for(auto i = eventHandlers.begin(); i != eventHandlers.end(); i++) (*i)(e);
     }
 }
 
-bool GLWindowManager::start() {
-    if(started) return false;
+bool GLWindowManager::init() {
+    if(initialized) return false;
+    //Reset error if a previous init failed
+    error = GLWM_OK;
+    xError = false;
 
+    // This is the basic process for getting a GLX window. Many of these
+    // functions are using simple hardcoded defaults that might need a revisit
+    // later, like selecting the FBConfig and the window size.
     XSetErrorHandler(GLWindowManager::printError);
     if(!connectToDisplay()) return false;
     selectScreen();
+    //GLX >=1.3 is needed
     if(!checkGLXVersion()) {
         cleanup();
         return false;
     }
     selectDepth();
-    if(!selectFBConfig()) {
-        cleanup();
-        return false;
-    }
-    if(!createContext() || !createWindow() || !setWindowProps()) {
+    if(!selectFBConfig()
+    || !createContext()
+    || !createWindow()
+    || !setWindowProps()) {
         cleanup();
         return false;
     }
 
-    started = true;
+    initialized = true;
     return true;
 }
 
-void GLWindowManager::stop() {
-    if(started) {
+void GLWindowManager::deinit() {
+    if(initialized) {
         cleanup();
-        started = false;
+        initialized = false;
     }
 }
 
 bool GLWindowManager::showWindow() {
-    if(!started) return false;
+    if(!initialized) return false;
 
     XMapWindow(d, xW);
     XSync(d, False);
@@ -247,7 +275,7 @@ bool GLWindowManager::showWindow() {
 }
 
 bool GLWindowManager::hideWindow() {
-    if(!started) return false;
+    if(!initialized) return false;
 
     XUnmapWindow(d, xW);
     XSync(d, False);
@@ -261,7 +289,7 @@ bool GLWindowManager::hideWindow() {
 }
 
 bool GLWindowManager::makeContextCurrent() {
-    if(!started) return false;
+    if(!initialized) return false;
 
     if(!glXMakeContextCurrent(d, glxW, glxW, c) || xError) {
         cout << "Error making context current." << endl;
@@ -273,7 +301,7 @@ bool GLWindowManager::makeContextCurrent() {
 }
 
 bool GLWindowManager::swapBuffers() {
-    if(!started) return false;
+    if(!initialized) return false;
 
     glXSwapBuffers(d, glxW);
     if(xError) {
@@ -299,6 +327,7 @@ void GLWindowManager::setLoopFunction(void (* func)()) {
 void GLWindowManager::startLoop() {
     doLoop = true;
     clock_t time;
+    // This is currently calculated for a hardcoded 60fps
     clock_t clocksPerFrame = CLOCKS_PER_SEC / 60;
     struct timespec sleepTime;
     sleepTime.tv_sec = 0;
@@ -308,6 +337,8 @@ void GLWindowManager::startLoop() {
         loopFunc();
         handleEvents();
 	time = clock()-time;
+        // Sleep if we haven't reached the frame time. I assume there are edge
+	// cases where the overhead of these steps may overrun the frame time
         if(time < clocksPerFrame) {
             sleepTime.tv_nsec = (float)(clocksPerFrame-time) / CLOCKS_PER_SEC * 1000000000;
             nanosleep(&sleepTime, NULL);
